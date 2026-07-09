@@ -62,9 +62,9 @@ export class App {
           }
         });
         this.latestGists.set(
-          this.latestGists().sort(
+          [...this.latestGists().sort(
             (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          ),
+          )]
         );
         if (!newData) {
           alert("No new gists found. Please try again later.");
