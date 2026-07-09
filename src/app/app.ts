@@ -21,24 +21,10 @@ interface Gist {
 })
 export class App {
   protected readonly title = signal('latest-gists');
-  latestGists = signal<Gist[]>([] as Gist[]);
+  latestGists = signal<Gist[]>([]);
+
   constructor(private http: HttpClient) {
-    this.http.get<Gist[]>('https://api.github.com/gists').subscribe({
-      next: (value) => {
-        this.latestGists.set(value);
-        this.latestGists.set(
-          this.latestGists().sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          ),
-        );
-      },
-      error: (err) => {
-        console.log(err);
-      },
-      complete: () => {
-        console.log('complete');
-      },
-    });
+    this.loadmore();
   }
 
   showGist(index: number) {
@@ -48,34 +34,22 @@ export class App {
   loadmore() {
     this.http.get<Gist[]>('https://api.github.com/gists').subscribe({
       next: (value) => {
-        let newData = false;
-        value.forEach((gist) => {
-          let alreadyExists = false;
-          this.latestGists().forEach((oldGist) => {
-            if (oldGist.id === gist.id) {
-              alreadyExists = true;
-            }
-          });
-          if (!alreadyExists) {
-            newData = true;
-            this.latestGists().push(gist);
-          }
-        });
-        this.latestGists.set(
-          [...this.latestGists().sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          )]
-        );
-        if (!newData) {
-          alert("No new gists found. Please try again later.");
+        const existingIds = new Set(this.latestGists().map((g) => g.id));
+        const newGists = value.filter((gist) => !existingIds.has(gist.id));
+
+        if (newGists.length === 0) {
+          alert('No new gists found. Please try again later.');
+          return;
         }
+
+        this.latestGists.set(
+          [...this.latestGists(), ...newGists].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+          ),
+        );
       },
-      error: (err) => {
-        console.log(err);
-      },
-      complete: () => {
-        console.log('loaded more!');
-      },
+      error: (err) => console.log(err),
+      complete: () => console.log('loaded more!'),
     });
   }
 }
